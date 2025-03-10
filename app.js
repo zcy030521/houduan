@@ -6,7 +6,7 @@ var logger = require('morgan');
 let cors = require('cors');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-
+const Check_login = require("./middleware/Check_login.js")
 var app = express();
 app.use(cors());
 // view engine setup
@@ -18,17 +18,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use("/", (req, res, next) => {
+  if (req.path === "/login") {
+    return next(); // 如果是登录路径，跳过身份验证
+  }
+  // 调用 check_login 中间件
+  Check_login()(req, res, next);
+});
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
