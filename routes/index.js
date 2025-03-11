@@ -97,7 +97,9 @@ let jwt = require('jsonwebtoken')
 
 router.post("/login", async (req, res) => {
   let { user, password } = req.body
-  const userinfo = await userModel.findOne({ user })
+  const userinfo = await userModel.findOne({ user:user })
+  console.log(userinfo,user,password);
+  
   if (!userinfo) {
     res.send({
       code: 400,
@@ -112,28 +114,37 @@ router.post("/login", async (req, res) => {
     })
     return false
   }
-  const token = jwt.sign({ user: userinfo.user }, '2404B', { expiresIn: "1h" })
+  const token = jwt.sign({ userId: userinfo._id }, '2404B')
+  console.log(token);
+  // let list = req.get("Authorization")
+  // console.log(list);
+  
   res.send({
     code: 200,
-    token
+    token,
+    ...req.user
   })
 })
 router.get("/list", async(req, res) => {
   let token = req.get('Authorization');
-
   token = token.split("Bearer ")[1];
-  const { user } = jwt.verify(token, "2404B");
-  let data = await userModel.findOne({ user }).populate({
+  const { userId } = jwt.verify(token, "2404B");
+  // console.log(user);
+  console.log(jwt.verify(token, "2404B"));
+  
+  let data = await userModel.findOne({ _id:userId }).populate({
     path: "role",
     populate: {
-      path: "permission"
-    }
+      path: "permission",
+      populate:{
+        path: "p_id",
+      }
+    },
   })
   console.log(data);
-  
   res.send({
     code: 200,
-    data
+    data,
   })
 })
 

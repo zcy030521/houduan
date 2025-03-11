@@ -3,8 +3,11 @@ const mongoose = require("./db")
 let LY = new mongoose.Schema({
     key:String,
     label:String,
-    p_id:mongoose.Types.ObjectId,
-        level:Number
+    p_id:{
+        type: mongoose.Types.ObjectId,
+        ref: 'LY'
+    },
+    level:Number
 });
 let LYModel = mongoose.model('LY', LY);
 // const permissionModel = mongoose.model('permission', permissionSchema)
