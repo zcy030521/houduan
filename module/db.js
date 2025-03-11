@@ -32,4 +32,18 @@ module.exports = {
     LYModel,
     LoginModel
 };
+// let LY = new mongoose.Schema({
+//     key:String,
+//     label:String,
+//     p_id:{
+//         type:mongoose.Types.ObjectId,
+//         ref:'LY'
+//     },
+//     level:Number
+// });
+// let LYModel = mongoose.model('LY', LY);
+// module.exports = {
+//     LYModel,
+// };
 
+module.exports = mongoose;
