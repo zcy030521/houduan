@@ -115,8 +115,8 @@ router.post("/login", async (req, res) => {
   }
   const token = jwt.sign({ userId: userinfo._id }, '2404B')
   console.log(token);
-  let list = req.get("Authorization")
-  console.log(list);
+  // let list = req.get("Authorization")
+  // console.log(list);
   
   res.send({
     code: 200,
@@ -134,10 +134,13 @@ router.get("/list", async(req, res) => {
   let data = await userModel.findOne({ _id:userId }).populate({
     path: "role",
     populate: {
-      path: "permission"
-    }
+      path: "permission",
+      populate:{
+        path: "p_id",
+      }
+    },
   })
-  // console.log(data);
+  console.log(data);
   res.send({
     code: 200,
     data,
