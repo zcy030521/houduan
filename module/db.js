@@ -10,8 +10,26 @@ let LY = new mongoose.Schema({
     },
     level:Number
 });
+let Login =new mongoose.Schema({
+    user:String,
+    pwd:String,
+    email:{
+        type:String,
+        default:''
+    },
+    phone:{
+        type:String,
+        default:''
+    },
+    img:{
+        type:String,
+        default:"http://localhost:3100/images/header.jpg"
+    }
+})
 let LYModel = mongoose.model('LY', LY);
+let LoginModel = mongoose.model('Login', Login);
 module.exports = {
-    LYModel
+    LYModel,
+    LoginModel
 };
 
