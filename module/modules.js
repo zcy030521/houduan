@@ -39,6 +39,7 @@ const userSchema = new mongoose.Schema({
         ref: 'role'
     }
 })
+
 const userModel = mongoose.model('user', userSchema)
 module.exports = {
     // permissionModel,
