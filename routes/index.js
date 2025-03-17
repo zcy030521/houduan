@@ -2,9 +2,9 @@
 var express = require('express');
 var router = express.Router();
 let { userModel, LYModel, roleModel } = require("../module/modules")
-let {shopmodel,catemodel} =require("../module/shopmodule")
+let {shopmodel,catemodel,inventorymodel,descriptionmodel} =require("../module/shopmodule")
 let jwt = require('jsonwebtoken');
-const { format } = require('morgan');
+
 
 router.post("/login", async (req, res) => {
   let { user, password } = req.body
@@ -29,7 +29,6 @@ router.post("/login", async (req, res) => {
   console.log(token);
   // let list = req.get("Authorization")
   // console.log(list);
-  
   res.send({
     code: 200,
     token,
@@ -79,18 +78,71 @@ router.post("/add", async(req,res)=>{
 //添加商品信息
 router.post("/addshop",async(req,res)=>{
   console.log(req.body);
+  
   await shopmodel.create(req.body)
   res.send({code:200,msg:"添加成功"})
 })
 router.post("/addcate",async(req,res)=>{
+  console.log(req.body);
     await catemodel.create(req.body)
     res.send({code:200,msg:"添加成功"})
 })
 
 //获取商品信息
 router.get("/shoplist",async(req,res)=>{
-  let data = await shopmodel.find()
+  let data = await shopmodel.find().populate("cate").populate("description")
+
+  console.log(data);
+  
+  res.send({code:200,data})
+})
+router.post("/shopupdate",async(req,res)=>{
+  console.log(req.body);
+  let {id} = req.query;
+  await shopmodel.updateOne({_id:id},req.body)
+  res.send({code:200,msg:"修改成功"})
+
+})
+router.get("/catelist",async(req,res)=>{
+
+  let data = await catemodel.find()
   res.send({code:200,data})
 })
 
-module.exports = router;
+router.get("/delectcate",async(req,res)=>{
+  let {id} = req.query
+  await catemodel.deleteOne({_id:id})
+  res.send({code:200,msg:"删除成功"})
+})
+router.post("/addshop",async(req,res)=>{
+  console.log(req.body);
+  
+  await shopmodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+//标签管理
+router.post("/addbq",async(req,res)=>{
+  await descriptionmodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+router.get("/bqlist",async(req,res)=>{
+  let data = await descriptionmodel.find()
+  res.send({code:200,data})
+})
+//库存记录
+router.post("/addkucun",async(req,res)=>{
+  await inventorymodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+router.get("/kucunlist",async(req,res)=>{
+  let data = await inventorymodel.find()
+  res.send({code:200,data})
+})
+router.post("/kucunchange",async(req,res)=>{
+  let {id,num} = req.body;
+  let data = await inventorymodel.findOne({_id:id})
+  data.num = num
+  await data.save()
+  res.send({code:200,msg:"修改成功"})
+})
+module.exports = router
