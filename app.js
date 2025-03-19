@@ -21,7 +21,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/images',express.static(path.join(__dirname, 'images')));
 
 app.use("/", (req, res, next) => {
-  if (req.path === "/login") {
+  let arr = ["/login","/upload","/merge"]
+  if (req.path === "/login"||req.path == '/upload'||req.path == '/merge') {
     return next(); // 如果是登录路径，跳过身份验证
   }
   // 调用 check_login 中间件
