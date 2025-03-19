@@ -12,7 +12,7 @@ let LY = new mongoose.Schema({
 let LYModel = mongoose.model('LY', LY);
 // const permissionModel = mongoose.model('permission', permissionSchema)
 // 创建角色集合
-const roleSchema = mongoose.Schema({
+const roleSchema =new mongoose.Schema({
     name: String, // 角色名称
     describe: String, // 角色描述
     time: {
@@ -39,6 +39,7 @@ const userSchema = new mongoose.Schema({
         ref: 'role'
     }
 })
+
 const userModel = mongoose.model('user', userSchema)
 module.exports = {
     // permissionModel,

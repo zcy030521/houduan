@@ -1,8 +1,14 @@
+
 var express = require('express');
 var router = express.Router();
 let { userModel, LYModel, roleModel } = require("../module/modules")
+<<<<<<< HEAD
 let jwt = require('jsonwebtoken')
 const axios = require('axios');
+=======
+let {shopmodel,catemodel,inventorymodel,descriptionmodel} =require("../module/shopmodule")
+let jwt = require('jsonwebtoken');
+>>>>>>> 9e233b974ee6c098ede90b464f601775e428906a
 
 
 router.post("/login", async (req, res) => {
@@ -28,7 +34,6 @@ router.post("/login", async (req, res) => {
   console.log(token);
   // let list = req.get("Authorization")
   // console.log(list);
-  
   res.send({
     code: 200,
     token,
@@ -58,7 +63,14 @@ router.get("/list", async(req, res) => {
   })
 })
 
+router.post("/login",async(req,res)=>{
+    let {user,pwd} = req.body
+    let data = await LoginModel.findOne({user,pwd})
+    if(data) res.send({code:200,msg:"登录成功"})
+    else res.send({code:404,msg:"登录失败"})
+})
 
+<<<<<<< HEAD
 const systemPrompt = `你是一个友好的多语言 AI 助手。请遵循以下规则：
 1. 检测用户输入的语言，并用相同的语言回复
 2. 保持专业、友好的语气
@@ -137,3 +149,86 @@ router.post('/chat', async (req, res) => {
 });
 
 module.exports = router;
+=======
+router.post("/register",async(req,res)=>{
+  let {user,pwd} = req.body
+  await LoginModel.create({user,pwd})
+  res.send({code:200,msg:"注册成功"})
+})
+router.post("/add", async(req,res)=>{
+  let result = await LYModel.create(req.body)
+  res.send({result})
+})
+
+//添加商品信息
+router.post("/addshop",async(req,res)=>{
+  console.log(req.body);
+  
+  await shopmodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+router.post("/addcate",async(req,res)=>{
+  console.log(req.body);
+    await catemodel.create(req.body)
+    res.send({code:200,msg:"添加成功"})
+})
+
+//获取商品信息
+router.get("/shoplist",async(req,res)=>{
+  let data = await shopmodel.find().populate("cate").populate("description")
+
+  console.log(data);
+  
+  res.send({code:200,data})
+})
+router.post("/shopupdate",async(req,res)=>{
+  console.log(req.body);
+  let {id} = req.query;
+  await shopmodel.updateOne({_id:id},req.body)
+  res.send({code:200,msg:"修改成功"})
+
+})
+router.get("/catelist",async(req,res)=>{
+
+  let data = await catemodel.find()
+  res.send({code:200,data})
+})
+
+router.get("/delectcate",async(req,res)=>{
+  let {id} = req.query
+  await catemodel.deleteOne({_id:id})
+  res.send({code:200,msg:"删除成功"})
+})
+router.post("/addshop",async(req,res)=>{
+  console.log(req.body);
+  
+  await shopmodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+//标签管理
+router.post("/addbq",async(req,res)=>{
+  await descriptionmodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+router.get("/bqlist",async(req,res)=>{
+  let data = await descriptionmodel.find()
+  res.send({code:200,data})
+})
+//库存记录
+router.post("/addkucun",async(req,res)=>{
+  await inventorymodel.create(req.body)
+  res.send({code:200,msg:"添加成功"})
+})
+router.get("/kucunlist",async(req,res)=>{
+  let data = await inventorymodel.find()
+  res.send({code:200,data})
+})
+router.post("/kucunchange",async(req,res)=>{
+  let {id,num} = req.body;
+  let data = await inventorymodel.findOne({_id:id})
+  data.num = num
+  await data.save()
+  res.send({code:200,msg:"修改成功"})
+})
+module.exports = router
+>>>>>>> 9e233b974ee6c098ede90b464f601775e428906a
