@@ -2,97 +2,8 @@ var express = require('express');
 var router = express.Router();
 let { userModel, LYModel, roleModel } = require("../module/modules")
 let jwt = require('jsonwebtoken')
+const axios = require('axios');
 
-/* GET home page. */
-// router.get('/', function(req, res, next) {
-//   res.render('index', { title: 'Express' });
-// });
-// let user_token = {}
-// router.get("/ly", async (req, res) => {
-//   let result = await LYModel.find().populate("p_id")
-//   res.send({ result })
-// })
-
-// // router.post("/add", async (req, res) => {
-// //   let result = await LYModel.create(req.body)
-// //   res.send({ result })
-// // })
-// router.get('/user_permission', async (req, res) => {
-//   // 获取前端传递的token
-//   const token = req.headers.authorization.substring(7)
-//   // 根据token获取对应的角色id
-//   // console.log(user_token[token]);
-//   // 根据用户的角色ID查询用户的角色信息
-//   const role = await roleModel.findOne({ _id: user_token[token] })
-//   // 根据角色ID查询所有的权限信息
-//   const permission = await permissionModel.find({ _id: { $in: role.permission } })
-//   const data_tree = covert(permission)
-//   console.log(data_tree);
-
-//   return res.send({
-//     code: 200,
-//     data: data_tree
-//   })
-// })
-// router.post('/login', async (req, res) => {
-//   const { name, password } = req.body
-//   // const newname=decryptInput(name)
-//   // const newpassword=decryptInput(password)
-//   // console.log(name,newname,password,newpassword);
-//   const user = await userModel.findOne({ name: name, password: password })
-//   if (user) {
-//     // 生成token
-//     let accessTokenData = accessToken({ user: user.name })
-//     let refreshTokenData = refreshToken({ user: user.name })
-//     const token = jwt.sign({ username: name }, '2312A', { expiresIn: "1h" })
-//     // 存储用户的token和用户信息
-//     user_token[token] = user.role
-//     // 返回token
-//     res.send({
-//       code: 200,
-//       token,
-//       code: 200,
-//       msg: "登录成功",
-//       accessToken: accessTokenData,
-//       refreshToken: refreshTokenData,
-//       data: user
-//     })
-//     return false
-//   }
-//   res.send({
-//     code: 400
-//   })
-// })
-// // 通过递归将扁平化数据结构转换成树状结构
-// function covert(data) {
-//   function tree(id) {
-//     let arr = []
-//     filter_data = data.filter(item => String(item.p_id) == String(id))//过滤出当前id下的所有数据
-//     // console.log(filter_data);
-//     filter_data.forEach(item => {//遍历当前id下的所有数据，递归调用tree函数
-//       const obj = {//创建对象，将当前id下的所有数据转换成树状结构
-//         _id: item._id,
-//         name: item.name,
-//         router: item.router,
-//         children: tree(item._id)//递归调用tree函数，传入当前id下的所有数据的_id作为新的id
-
-//       }
-//       arr.push(obj)//将当前id下的所有数据转换成树状结构，并推入arr数组中
-//     })
-//     return arr//返回树状结构数据
-
-//   }
-//   return tree(undefined)//调用tree函数，传入undefined作为初始id
-
-// }
-// router.post("/useradd", (req, res) => {
-//   userModel.create(req.body)
-//   res.send({ code: 200 })
-// })
-// router.post("/roleadd", (req, res) => {
-//   roleModel.create(req.body)
-//   res.send({ code: 200 })
-// })
 
 router.post("/login", async (req, res) => {
   let { user, password } = req.body
@@ -147,5 +58,82 @@ router.get("/list", async(req, res) => {
   })
 })
 
+
+const systemPrompt = `你是一个友好的多语言 AI 助手。请遵循以下规则：
+1. 检测用户输入的语言，并用相同的语言回复
+2. 保持专业、友好的语气
+3. 回答后使用"---"作为分隔符
+4. 在分隔符后提供三个相关的追问，每个以"•"开头
+5. 相关问题使用与用户相同的语言`;
+
+router.post('/chat', async (req, res) => {
+    // 获取用户输入的消息和上一个问题
+    const { message, lastQuestion } = req.body;
+    if (!message) {
+        return res.status(400).json({ error: '消息不能为空' });
+    }
+    try {
+        const messagesToSend = [
+            { role: "system", content: systemPrompt }
+        ];
+        // 如果有上一个问题，添加到消息列表中
+        if (lastQuestion) {
+            messagesToSend.push({ role: "user", content: lastQuestion });
+        }
+        // 添加当前问题
+        messagesToSend.push({ role: "user", content: message });
+        // 调用 AI API
+        const response = await axios.post(
+            'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+            {
+                model: "qwen-turbo",
+                input: {
+                    messages: messagesToSend
+                },
+                parameters: {
+                    max_tokens: 2048,
+                    temperature: 0.7,
+                    top_p: 0.8
+                }
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer sk-11b93c1819924bd7ad59fe3f8026f1ca`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        // 处理 AI 响应
+        const fullResponse = response.data.output.text;
+        // 分割主回答和相关问题
+        const [answer, relatedQuestionsText] = fullResponse.split('---').map(str => str.trim());
+        // 提取相关问题
+        const relatedQuestions = relatedQuestionsText ?
+            relatedQuestionsText.split('\n')
+               .filter(q => q.trim().startsWith('•'))
+               .map(q => q.trim().substring(1).trim())
+            : [];
+        // 逐字发送响应
+        const chars = answer.split('');
+        for (let char of chars) {
+            res.write(`data: ${JSON.stringify({ text: char, done: false })}\n\n`);
+            await new Promise(resolve => setTimeout(resolve, 50)); // 添加延迟以实现打字效果
+        }
+        // 发送完成信号和相关问题
+        res.write(`data: ${JSON.stringify({
+            done: true,
+            relatedQuestions: relatedQuestions
+        })}\n\n`);
+        res.end();
+
+    } catch (error) {
+        console.error('API 错误:', error);
+        res.write(`data: ${JSON.stringify({
+            error: '服务器错误',
+            details: error.message
+        })}\n\n`);
+        res.end();
+    }
+});
 
 module.exports = router;
