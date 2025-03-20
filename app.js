@@ -17,12 +17,12 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use("/public",express.static(path.join(__dirname, 'public')));
 app.use('/images',express.static(path.join(__dirname, 'images')));
 
 app.use("/", (req, res, next) => {
-  let arr = ["/login","/upload","/merge"]
-  if (req.path === "/login"||req.path == '/upload'||req.path == '/merge') {
+  let arr = ["/login","/upload","/merge","/uploadimage"]
+  if (req.path === "/login"||req.path == '/upload'||req.path == '/merge'||"/uploadimage") {
     return next(); // 如果是登录路径，跳过身份验证
   }
   // 调用 check_login 中间件

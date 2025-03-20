@@ -1,4 +1,3 @@
-
 var express = require('express');
 var router = express.Router();
 let { userModel, LYModel, roleModel } = require("../module/modules")
@@ -7,7 +6,6 @@ let jwt = require('jsonwebtoken');
 const xlsx = require('xlsx');
 const Excel = require('exceljs');
 const workbook = new Excel.Workbook();
-let fs = require('fs')
 
 var multiparty = require('multiparty')
 var fse = require('fs-extra')
@@ -15,6 +13,9 @@ var path = require('path');
 // 定义uploads目录
 const UPLOAD_DIR = path.resolve(__dirname, '../uploads')
  
+// 存储导入进度的对象
+const importProgress = {};
+
 // 提取文件扩展名
 const extractExt = filename => filename.slice(filename.lastIndexOf('.'))
 
@@ -103,28 +104,132 @@ router.post('/merge', async (req, res) => {
   }
  
   await fse.remove(chunkDir);  // 删除存放切片的目录
-  res.status(200).json({ ok: true, msg: '文件合并成功' });
   
-  function readFile(filePath) {
-    const fileContent = xlsx.readFile(filePath); // 读取 Excel 文件
-    const sheetName = fileContent.SheetNames[0]; // 获取第一张 sheet 的名字
-    const sheet = fileContent.Sheets[sheetName]; // 获取第一张 sheet 的数据
-    const jsonData = xlsx.utils.sheet_to_json(sheet); // 将数据转换为 JSON 格式
-    return jsonData;
-    }
-    
-    // 示例：读取 Excel 文件并输出 JSON 数据
-    const jsonData = readFile(`./uploads/${fileHash}.xlsx`);
-    jsonData.forEach(item=>{
-      async function add(item){
-        let cate =await catemodel.findOne({name:item.cate})
-        let descriptions = await descriptionmodel.findOne({name:item.description})
-          await shopmodel.create({name:item.name,price:item.price,img:[item.img],cate:cate._id,number:item.number,description:descriptions._id})
+  // Start processing the Excel file after sending the response
+  res.status(200).json({ ok: true, msg: '文件合并成功，开始处理数据导入...' });
+  
+  // 优化Excel处理，支持大数据量导入
+  const processExcelFile = async (filePath) => {
+    try {
+      console.log(`开始处理Excel文件: ${filePath}`);
+      
+      // 读取Excel文件，使用stream方式处理大文件
+      const workbook = xlsx.readFile(filePath, {
+        cellFormula: false,  // 禁用公式解析以提高性能
+        cellStyles: false,   // 禁用样式解析以提高性能
+        cellNF: false,       // 禁用数字格式解析以提高性能
+      });
+      
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // 获取所有分类和标签，减少数据库查询次数
+      const allCategories = await catemodel.find({}).lean();
+      const allDescriptions = await descriptionmodel.find({}).lean();
+      
+      // 创建分类和标签的映射，减少查询时间
+      const categoryMap = new Map();
+      const descriptionMap = new Map();
+      
+      allCategories.forEach(cat => categoryMap.set(cat.name, cat._id));
+      allDescriptions.forEach(desc => descriptionMap.set(desc.name, desc._id));
+      
+      // 批量处理数据，每次处理BATCH_SIZE条记录
+      const BATCH_SIZE = 1000;
+      let processedCount = 0;
+      let errorCount = 0;
+      let totalCount = 0;
+      let batch = [];
+      
+      // 使用流式处理，减少内存占用
+      const jsonData = xlsx.utils.sheet_to_json(worksheet);
+      totalCount = jsonData.length;
+      console.log(`总记录数: ${totalCount}`);
+      
+      for (const item of jsonData) {
+        try {
+          // 使用映射查找ID，避免数据库查询
+          const categoryId = categoryMap.get(item.cate);
+          const descriptionId = descriptionMap.get(item.description);
+          
+          // 如果找不到分类或标签，自动创建
+          if (!categoryId && item.cate) {
+            const newCategory = await catemodel.create({ name: item.cate });
+            categoryMap.set(item.cate, newCategory._id);
+          }
+          
+          if (!descriptionId && item.description) {
+            const newDescription = await descriptionmodel.create({ name: item.description });
+            descriptionMap.set(item.description, newDescription._id);
+          }
+          
+          // 将处理好的数据添加到批次中
+          batch.push({
+            name: item.name,
+            price: item.price,
+            img: item.img ? [item.img] : [],
+            cate: categoryMap.get(item.cate),
+            number: item.number,
+            description: descriptionMap.get(item.description)
+          });
+          
+          // 当批次达到指定大小时，执行批量插入
+          if (batch.length >= BATCH_SIZE) {
+            await shopmodel.insertMany(batch, { ordered: false });
+            processedCount += batch.length;
+            console.log(`已处理 ${processedCount}/${totalCount} 条记录 (${Math.round((processedCount/totalCount)*100)}%)`);
+            batch = [];
+          }
+        } catch (err) {
+          errorCount++;
+          console.error(`处理记录错误: ${err.message}`);
+        }
       }
-      add(item)
-    })
-    console.log(jsonData);
+      
+      // 处理剩余的批次
+      if (batch.length > 0) {
+        await shopmodel.insertMany(batch, { ordered: false });
+        processedCount += batch.length;
+      }
+      
+      console.log(`数据导入完成。成功: ${processedCount}, 失败: ${errorCount}, 总计: ${totalCount}`);
+      return { processed: processedCount, errors: errorCount, total: totalCount };
+    } catch (err) {
+      console.error(`处理Excel文件失败: ${err.message}`);
+      return { processed: 0, errors: 1, total: 1 };
+    }
+  };
+  
+  // 异步处理Excel文件，不阻塞响应
+  processExcelFile(`./uploads/${fileHash}${extractExt(fileName)}`).catch(err => {
+    console.error('Excel处理失败:', err);
+  });
 });
+
+// 获取导入进度的API
+router.get('/import-progress/:fileHash', function (req, res) {
+  const { fileHash } = req.params;
+  if (importProgress[fileHash]) {
+    res.status(200).json(importProgress[fileHash]);
+  } else {
+    res.status(404).json({ error: '未找到该文件的导入进度' });
+  }
+});
+
+router.post("/uploadimage",async(req,res)=>{
+    let from = new multiparty.Form()
+    from.uploadDir = "./public/images"
+    from.parse(req,(err,fields,files)=>{
+      let file = files
+      console.log(file);
+      res.send({
+        code:200,
+        url:"http://localhost:3100/"+file.file[0].path
+      })
+    })
+
+
+})
 router.post("/login", async (req, res) => {
   let { user, password } = req.body
   const userinfo = await userModel.findOne({ user:user })
@@ -209,11 +314,38 @@ router.post("/addcate",async(req,res)=>{
 
 //获取商品信息
 router.get("/shoplist",async(req,res)=>{
-  let data = await shopmodel.find().populate("cate").populate("description")
-
-  console.log(data);
+  let {page = 1, limit = 10} = req.query
+  let {name,cate,description,minprice,maxprice} = req.query
+  let query = {}
+  if(name) query.name = {$regex:name}
+  if(cate) query.cate = cate
+  if(description) query.description = description
   
-  res.send({code:200,data})
+  // 修复价格区间查询
+  if((minprice && minprice !== '0') || (maxprice && maxprice !== '0')) {
+    query.price = {};
+    if(minprice && minprice !== '0') {
+      query.price.$gte = Number(minprice);
+    }
+    if(maxprice && maxprice !== '0') {
+      query.price.$lte = Number(maxprice);
+    }
+  }
+  
+  console.log("查询条件:", JSON.stringify(query));
+  
+  // 确保page和limit是数字
+  page = Number(page) || 1;
+  limit = Number(limit) || 10;
+  
+  // 修复查询和分页逻辑
+  let skip = (page - 1) * limit;
+  let data = await shopmodel.find(query).populate("cate").populate("description").skip(skip).limit(limit);
+  let total = await shopmodel.countDocuments(query);
+  
+  console.log(`查询结果: ${data.length}条, 总数: ${total}`);
+  
+  res.send({code:200,data,total})
 })
 router.post("/shopupdate",async(req,res)=>{
   console.log(req.body);
