@@ -264,6 +264,24 @@ router.post("/kucunchange",async(req,res)=>{
   await data.save()
   res.send({code:200,msg:"修改成功"})
 })
+
+//苏浚瑞
+//发送随机数数据
+
+//生成随机数范围
+const generateRandom = (min,max,fixed=0)=>{
+  return (Math.random()*(max-min)+min).toFixed(fixed);
+}
+router.get("/metrics",async(req,res)=>{
+    const mockData ={
+      newUsers:generateRandom(500,2000),
+    }
+ res.send({
+  code:200,
+  data:mockData,
+  timestamp:new Date().getTime()
+ })
+})
 module.exports = router
 
 
