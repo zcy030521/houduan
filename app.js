@@ -7,6 +7,7 @@ let cors = require('cors');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var tuanzhang = require('./routes/tuanzhang');
+const sujunrun = require('./routes/sujunrun.js')
 const Checklogin = require("./middleware/Check_login.js")
 var app = express();
 app.use(cors());
@@ -32,6 +33,7 @@ app.use("/", (req, res, next) => {
   Checklogin()(req, res, next);
 });
 app.use('/', indexRouter);
+app.use('/', sujunrun)
 app.use('/users', usersRouter);
 app.use('/t', tuanzhang);
 // catch 404 and forward to error handler
