@@ -36,9 +36,11 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: mongoose.Types.ObjectId,
-        ref: 'role'
+        ref: 'role',
+        default:"67cc4cb0f54150863a612e6e"
     }
 })
+
 
 const userModel = mongoose.model('user', userSchema)
 module.exports = {

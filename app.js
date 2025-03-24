@@ -6,6 +6,7 @@ var logger = require('morgan');
 let cors = require('cors');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+let ybwRouter = require("./routes/ybw")
 const Checklogin = require("./middleware/Check_login.js")
 var app = express();
 app.use(cors());
@@ -21,7 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/images',express.static(path.join(__dirname, 'images')));
 
 app.use("/", (req, res, next) => {
-  if (req.path === "/login") {
+  let arr = ["/login", "/register", "/shoplist","/home",'/sreach']
+  if (arr.includes(req.path)) {
     return next(); // 如果是登录路径，跳过身份验证
   }
   // 调用 check_login 中间件
@@ -30,6 +32,7 @@ app.use("/", (req, res, next) => {
   Checklogin()(req, res, next);
 });
 app.use('/', indexRouter);
+app.use('/', ybwRouter);
 app.use('/users', usersRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
