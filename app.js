@@ -7,6 +7,8 @@ let cors = require('cors');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 let ybwRouter = require("./routes/ybw")
+var tuanzhang = require('./routes/tuanzhang');
+const sujunrun = require('./routes/sujunrun.js')
 const Checklogin = require("./middleware/Check_login.js")
 var app = express();
 app.use(cors());
@@ -18,11 +20,11 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use("/public",express.static(path.join(__dirname, 'public')));
 app.use('/images',express.static(path.join(__dirname, 'images')));
 
 app.use("/", (req, res, next) => {
-  let arr = ["/login", "/register", "/shoplist","/home",'/sreach']
+  let arr = ["/login", "/register", "/shoplist","/home",'/sreach',"/login","/upload","/merge","/uploadimage",'/shoplist']
   if (arr.includes(req.path)) {
     return next(); // 如果是登录路径，跳过身份验证
   }
@@ -33,7 +35,9 @@ app.use("/", (req, res, next) => {
 });
 app.use('/', indexRouter);
 app.use('/', ybwRouter);
+app.use('/', sujunrun)
 app.use('/users', usersRouter);
+app.use('/t', tuanzhang);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
