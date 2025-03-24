@@ -8,26 +8,31 @@ let info = mongoose.Schema({
     yingyezhizhao:String,
     shopimg:String,
     door:String,
-    cate:{
+    cates:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'cate'
+        ref:'cates'
     },
     startTime:String,
     endTime:String,
     status:Number,
     regtime:String
 })
-let cate = mongoose.Schema({
+let catelist = mongoose.Schema({
     name:String,
 })
+let dingdan = mongoose.Schema({
+    name:String,
+    status:String,
+    time:String,
+    shoplist:{
+        type:Array,
+        default:[]
+    }
+})
 
-let cateModel = mongoose.model("cate", cate, "cate")
+let cateModel = mongoose.model("cates", catelist, "cates")
 
 let infoModel = mongoose.model("info", info, "info")
-
-
-
-
 
 module.exports ={
     infoModel,
