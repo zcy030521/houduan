@@ -6,6 +6,7 @@ var logger = require('morgan');
 let cors = require('cors');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+const sujunrun = require('./routes/sujunrun.js')
 const Checklogin = require("./middleware/Check_login.js")
 var app = express();
 app.use(cors());
@@ -31,6 +32,7 @@ app.use("/", (req, res, next) => {
   Checklogin()(req, res, next);
 });
 app.use('/', indexRouter);
+app.use('/', sujunrun)
 app.use('/users', usersRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
